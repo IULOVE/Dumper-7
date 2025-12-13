@@ -1,10 +1,39 @@
 #pragma once
+
 #include <string>
 
-#include "Enums.h"
+#include "Unreal/Enums.h"
 
 namespace Settings
 {
+	namespace General
+	{
+		/* This option determines whether calls to FindByStringInAllSections should only search executable sections, or all sections. */
+		constexpr bool bSearchOnlyExecutableSectionsForStrings = true;
+
+		/* If the target module is not the main executable, specify it here (e.g. "Some-dll-name.dll") */
+		constexpr const char* DefaultModuleName = nullptr;
+	}
+  
+	inline constexpr const char* GlobalConfigPath = "C:/Dumper-7/Dumper-7.ini";
+
+	namespace Config
+	{
+		inline int SleepTimeout = 0;
+		inline std::string SDKNamespaceName = "SDK";
+
+		void Load();
+	};
+
+	namespace EngineCore
+	{
+		/* A special setting to fix UEnum::Names where the type is sometimes TArray<FName> and sometimes TArray<TPair<FName, Some8BitData>> */
+		constexpr bool bCheckEnumNamesInUEnum = false;
+
+		/* Enables support for TEncryptedObjectProperty */
+		constexpr bool bEnableEncryptedObjectPropertySupport = false;
+	}
+
 	namespace Generator
 	{
 		//Auto generated if no override is provided
@@ -19,21 +48,19 @@ namespace Settings
 		/* No prefix for files->FilePrefix = "" */
 		constexpr const char* FilePrefix = "";
 
-		/* No seperate namespace for SDK -> SDKNamespaceName = nullptr */
-		constexpr const char* SDKNamespaceName = "SDK";
-
 		/* No seperate namespace for Params -> ParamNamespaceName = nullptr */
 		constexpr const char* ParamNamespaceName = "Params";
 
-		/* Feature is currently not supported/not working. */
-		/* Do not XOR strings -> XORString = nullptr. Custom XorStr implementations differing from https://github.com/JustasMasiulis/xorstr may require changes to the struct 'StringLiteral' in CppGenerator.cpp.  */
+		/* XOR function name, that will be wrapped around any generated string. e.g. "xorstr_" -> xorstr_("Pawn") etc. */
 		constexpr const char* XORString = nullptr;
+		/* XOR header file name. e.g. "xorstr.hpp" */
+		constexpr const char* XORStringInclude = nullptr;
 
 		/* Customizable part of Cpp code to allow for a custom 'uintptr_t InSDKUtils::GetImageBase()' function */
 		constexpr const char* GetImageBaseFuncBody = 
-R"(	{
-		return reinterpret_cast<uintptr_t>(GetModuleHandle(0));
-	}
+R"({
+	return reinterpret_cast<uintptr_t>(GetModuleHandle(0));
+}
 )";
 		/* Customizable part of Cpp code to allow for a custom 'InSDKUtils::CallGameFunction' function */
 		constexpr const char* CallGameFunction =
@@ -50,6 +77,9 @@ R"(
 
 		/* This will allow the user to manually initialize global variable addresses in the SDK (eg. GObjects, GNames, AppendString). */
 		constexpr bool bAddManualOverrideOptions = true;
+
+		/* Adds the 'final' specifier to classes with no loaded child class at SDK-generation time. */
+		constexpr bool bAddFinalSpecifier = true;
 	}
 
 	namespace MappingGenerator
@@ -58,7 +88,7 @@ R"(
 		constexpr bool bShouldCheckForDuplicatedNames = true;
 
 		/* Whether EditorOnly should be excluded from the mapping file. */
-		constexpr bool bExcludeEditorOnlyProperties = false;
+		constexpr bool bExcludeEditorOnlyProperties = true;
 
 		/* Which compression method to use when generating the file. */
 		constexpr EUsmapCompressionMethod CompressionMethod = EUsmapCompressionMethod::ZStandard;
@@ -67,13 +97,18 @@ R"(
 	/* Partially implemented  */
 	namespace Debug
 	{
-		inline constexpr bool bGenerateAssertionFile = false;
+		/* Generates a dedicated file defining macros for static asserts (Make sure InlineAssertions are off) */
+		inline constexpr bool bGenerateAssertionFile = true;
+
+		/* Prefix for assertion macros in assertion file. Example for "MyPackage_params.hpp": #define DUMPER7_ASSERTS_PARAMS_MyPackage */
+		inline constexpr const char* AssertionMacroPrefix = "DUMPER7_ASSERTS_";
+
 
 		/* Adds static_assert for struct-size, as well as struct-alignment */
-		inline constexpr bool bGenerateInlineAssertionsForStructSize = true;
+		inline constexpr bool bGenerateInlineAssertionsForStructSize = false;
 
 		/* Adds static_assert for member-offsets */
-		inline constexpr bool bGenerateInlineAssertionsForStructMembers = true;
+		inline constexpr bool bGenerateInlineAssertionsForStructMembers = false;
 
 
 		/* Prints debug information during Mapping-Generation */
@@ -85,8 +120,14 @@ R"(
 	//* * * * * * * * * * * * * * * * * * * * *//
 	namespace Internal
 	{
-		// UEEnum::Names
-		inline bool bIsEnumNameOnly = false;
+		/* Whether UEnum::Names stores only the name of the enum value, or a Pair<Name, Value> */
+		inline bool bIsEnumNameOnly = false; // EDemoPlayFailure
+
+		/* Whether the 'Value' component in the Pair<Name, Value> UEnum::Names is a uint8 value, rather than the default int64 */
+		inline bool bIsSmallEnumValue = false;
+
+		/* Whether UEnum::Names is of the new 'FNameData' type, rather than TArray<...> */
+		inline bool bIsNewUE5EnumNamesContainer = false;
 
 		/* Whether TWeakObjectPtr contains 'TagAtLastTest' */
 		inline bool bIsWeakObjectPtrWithoutTag = false;
@@ -94,7 +135,7 @@ R"(
 		/* Whether this games' engine version uses FProperty rather than UProperty */
 		inline bool bUseFProperty = false;
 
-		/* Whether this games' engine version uses FNamePool rather than TNameEntryArray */
+		/* Whether this game's engine version uses FNamePool rather than TNameEntryArray */
 		inline bool bUseNamePool = false;
 
 		/* Whether UObject::Name or UObject::Class is first. Affects the calculation of the size of FName in fixup code. Not used after Off::Init(); */
@@ -104,13 +145,24 @@ R"(
 		inline bool bUseCasePreservingName = false;
 
 		/* Whether this games uses FNameOutlineNumber, moving the 'Number' component from FName into FNameEntry inside of FNamePool */
-		inline bool bUseUoutlineNumberName = false;
+		inline bool bUseOutlineNumberName = false;
 
+		/* Whether this game uses the 'FFieldPathProperty' cast flags for a custom property 'FObjectPtrProperty' */
+		inline bool bIsObjPtrInsteadOfFieldPathProperty = false;
 
 		/* Whether this games' engine version uses a contexpr flag to determine whether a FFieldVariant holds a UObject* or FField* */
 		inline bool bUseMaskForFieldOwner = false;
 
 		/* Whether this games' engine version uses double for FVector, instead of float. Aka, whether the engine version is UE5.0 or higher. */
 		inline bool bUseLargeWorldCoordinates = false;
+
+		/* Whether this game uses uint8 for UEProperty::ArrayDim, instead of int32 */
+		inline bool bUseUint8ArrayDim = false;
 	}
+
+	extern void InitWeakObjectPtrSettings();
+	extern void InitLargeWorldCoordinateSettings();
+
+	extern void InitObjectPtrPropertySettings();
+	extern void InitArrayDimSizeSettings();
 }
