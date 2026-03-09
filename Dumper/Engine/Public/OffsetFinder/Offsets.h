@@ -135,6 +135,8 @@ namespace Off
 		inline int32 Next = 0x20;
 		inline int32 Name = 0x28;
 		inline int32 Flags = 0x30;
+
+		inline int32 EditorOnlyMetadata = -1; // Only present in editor builds
 	}
 
 	namespace FFieldClass
@@ -143,7 +145,7 @@ namespace Off
 		// Fixed for OutlineNumber FNames by OffsetFinder::FixFNameSize();
 		inline int32 Name = 0x00;
 		inline int32 Id = 0x08;
-		inline int32 CastFlags = 0x10;
+		inline int32 CastFlags = 0x10; // 0x18 on UE5.7
 		inline int32 ClassFlags = 0x18;
 		inline int32 SuperClass = 0x20;
 	}
@@ -193,6 +195,9 @@ namespace Off
 
 	namespace UStruct
 	{
+		/* Optional offset, if available we can generate a faster IsA implementation for the SDK. */
+		inline int32 StructBaseChain = -1;
+
 		inline int32 SuperStruct;
 		inline int32 Children;
 		inline int32 ChildProperties;
